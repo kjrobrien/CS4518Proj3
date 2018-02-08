@@ -24,6 +24,9 @@ import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.api.GoogleApiClient;
 import com.google.android.gms.location.ActivityRecognition;
 import com.google.android.gms.location.ActivityRecognitionClient;
+import com.google.android.gms.location.Geofence;
+import com.google.android.gms.location.GeofencingClient;
+import com.google.android.gms.location.GeofencingRequest;
 import com.google.android.gms.location.LocationServices;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
@@ -32,24 +35,30 @@ import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.tasks.OnSuccessListener;
 
+import java.util.ArrayList;
+import java.util.List;
+
 public class MainActivity extends AppCompatActivity implements GoogleApiClient.ConnectionCallbacks,
         GoogleApiClient.OnConnectionFailedListener, OnMapReadyCallback {
 
     private static final String TAG = MainActivity.class.getSimpleName();
-
     private GoogleApiClient mGoogleApiClient;
-
     private MapFragment mMapFragment;
-
     private BroadcastReceiver mReceiver;
-
     private ImageView mActivityImage;
     private TextView mActivityText;
-
+    private TextView fullerVisitsTextView;
+    private TextView libraryVisitsTextView;
     private long timeActivityStarted = 0;
-
     private String currentActivity;
 
+    //Geofences
+    private List<Geofence> mGeofenceList;
+    private PendingIntent mGeofenceRequestIntent;
+    private Geofence fullerGeofence;
+    private Geofence libraryGeofence;
+    private int fullerVisists = 0;
+    private int libraryVisits = 0;
 
 
     @Override
@@ -59,7 +68,12 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
 
         // Set up the google api client
         if (mGoogleApiClient == null) {
-            mGoogleApiClient = new GoogleApiClient.Builder(this).addConnectionCallbacks(this).addOnConnectionFailedListener(this).addApi(LocationServices.API).addApi(ActivityRecognition.API).build();
+            mGoogleApiClient = new GoogleApiClient.Builder(this)
+                    .addConnectionCallbacks(this)
+                    .addOnConnectionFailedListener(this)
+                    .addApi(LocationServices.API)
+                    .addApi(ActivityRecognition.API)
+                    .build();
             mGoogleApiClient.connect();
         }
 
@@ -69,17 +83,49 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
 
         mActivityImage = (ImageView) findViewById(R.id.imageView);
         mActivityText = (TextView) findViewById(R.id.textActivity);
+        fullerVisitsTextView = (TextView) findViewById(R.id.fullerVisitText);
+        libraryVisitsTextView = (TextView) findViewById(R.id.libraryVisitText);
+
+        //Set up geofence
+        mGeofenceList = new ArrayList<Geofence>();
+        createGeofences();
 
         // Listen for LocalBroadcast of activity recognition
         mReceiver = new BroadcastReceiver() {
             @Override
             public void onReceive(Context context, Intent intent) {
                 String activity = intent.getStringExtra(ActivityRecognizedService.LOCAL_BROADCAST_EXTRA);
-                processActivity(activity);
+                if (activity.equals("STILL") || activity.equals("RUNNING") || activity.equals("WALKING")){
+                    processActivity(activity);
+                } else {
+                    processGeoActivity(activity);
+                }
             }
         };
 
         LocalBroadcastManager.getInstance(this).registerReceiver(mReceiver, new IntentFilter(ActivityRecognizedService.LOCAL_BROADCAST_NAME));
+    }
+
+    public void createGeofences() {
+        //Make the fuller geofence
+        fullerGeofence = new Geofence.Builder()
+                .setRequestId("fuller")
+                .setTransitionTypes(Geofence.GEOFENCE_TRANSITION_ENTER | Geofence.GEOFENCE_TRANSITION_EXIT)
+                .setCircularRegion(42.275076, -71.806496, 40f)
+                .setExpirationDuration(3600000)
+                .build();
+
+        //Make the library geofence
+        libraryGeofence = new Geofence.Builder()
+                .setRequestId("library")
+                .setTransitionTypes(Geofence.GEOFENCE_TRANSITION_ENTER | Geofence.GEOFENCE_TRANSITION_EXIT)
+                .setCircularRegion(42.274264, -71.806251, 40f)
+                .setExpirationDuration(3600000)
+                .build();
+
+        //Adds them to the list of geofences
+        mGeofenceList.add(fullerGeofence);
+        mGeofenceList.add(libraryGeofence);
     }
 
     // When the map loads
@@ -111,9 +157,35 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
     @Override
     public void onConnected(@Nullable Bundle bundle) {
         // start activity recognition
-        Intent intent = new Intent( this, ActivityRecognizedService.class );
-        PendingIntent pendingIntent = PendingIntent.getService( this, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT );
-        ActivityRecognition.ActivityRecognitionApi.requestActivityUpdates( mGoogleApiClient, 0, pendingIntent );
+        Intent intent = new Intent(this, ActivityRecognizedService.class);
+        PendingIntent pendingIntent = PendingIntent.getService(this, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT);
+        ActivityRecognition.ActivityRecognitionApi.requestActivityUpdates(mGoogleApiClient, 0, pendingIntent);
+
+        // Get the PendingIntent for the geofence monitoring request.
+        // Send a request to add the current geofences.
+        mGeofenceRequestIntent = getGeofenceTransitionPendingIntent();
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            // TODO: Consider calling
+            //    ActivityCompat#requestPermissions
+            // here to request the missing permissions, and then overriding
+            //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
+            //                                          int[] grantResults)
+            // to handle the case where the user grants the permission. See the documentation
+            // for ActivityCompat#requestPermissions for more details.
+            return;
+        }
+        LocationServices.GeofencingApi.addGeofences(mGoogleApiClient, mGeofenceList,
+                mGeofenceRequestIntent);
+        finish();
+    }
+
+    /**
+     * Create a PendingIntent that triggers GeofenceTransitionIntentService when a geofence
+     * transition occurs.
+     */
+    private PendingIntent getGeofenceTransitionPendingIntent() {
+        Intent intent = new Intent(this, GeofenceTransitionsIntentService.class);
+        return PendingIntent.getService(this, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT);
     }
 
 
@@ -162,5 +234,31 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
             }
         }
 
+    }
+
+    //TODO: Do the step counter thing
+    //This is where you decide what happens to geofence activity
+    private void processGeoActivity(String activity) {
+        if (activity.equals("entering fuller")){
+            //start counting steps
+
+            //If we reach 6 steps...
+            //make toast
+            Toast.makeText(this, "You have taken 6 steps inside Fuller Laboratories Geofence, incrementing counter", Toast.LENGTH_SHORT);
+            //change ui
+            fullerVisists++;
+            fullerVisitsTextView.setText(fullerVisists);
+
+
+
+        }
+        if (activity.equals("entering library")){
+
+
+            Toast.makeText(this, "You have taken 6 steps inside the Gordon Library Geofence, incrementing counter", Toast.LENGTH_SHORT);
+            libraryVisits++;
+            libraryVisitsTextView.setText(libraryVisits);
+
+        }
     }
 }
