@@ -17,8 +17,8 @@ import com.google.android.gms.location.GeofencingEvent;
 public class GeofenceTransitionsIntentService extends IntentService
         implements GoogleApiClient.ConnectionCallbacks, GoogleApiClient.OnConnectionFailedListener {
 
-    public static String LOCAL_BROADCAST_NAME = "LOCAL_ACT_RECOGNITION";
-    public static String LOCAL_BROADCAST_EXTRA = "RESULT";
+    public static String LOCAL_BROADCAST_NAME = "LOCAL_GEO_RECOGNITION";
+    public static String LOCAL_BROADCAST_EXTRA = "GEO_RESULT";
 
     public GeofenceTransitionsIntentService() {
         super(GeofenceTransitionsIntentService.class.getSimpleName());
@@ -45,8 +45,10 @@ public class GeofenceTransitionsIntentService extends IntentService
         String message = "Incorrect event???"; //If we get this, some weird shit happened
 
         if (event.getGeofenceTransition() == Geofence.GEOFENCE_TRANSITION_ENTER){
+            Log.e("GEOFENCE!!!!", "ENTERING " + event.getTriggeringGeofences().get(0).getRequestId());
             message = "entering " + event.getTriggeringGeofences().get(0).getRequestId();
         } else if (event.getGeofenceTransition() == Geofence.GEOFENCE_TRANSITION_EXIT){
+            Log.e("GEOFENCE!!!!", "LEAVING " + event.getTriggeringGeofences().get(0).getRequestId());
             message = "leaving " + event.getTriggeringGeofences().get(0).getRequestId();
         }
         Intent intent = new Intent(LOCAL_BROADCAST_NAME);
