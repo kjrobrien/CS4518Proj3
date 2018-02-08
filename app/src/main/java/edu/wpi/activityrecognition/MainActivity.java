@@ -244,7 +244,7 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
 
             //If we reach 6 steps...
             //make toast
-            Toast.makeText(this, "You have taken 6 steps inside Fuller Laboratories Geofence, incrementing counter", Toast.LENGTH_SHORT);
+            Toast.makeText(this, "You have taken 6 steps inside Fuller Laboratories Geofence, incrementing counter", Toast.LENGTH_SHORT).show();
             //change ui
             fullerVisists++;
             fullerVisitsTextView.setText(fullerVisists);
@@ -255,7 +255,7 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
         if (activity.equals("entering library")){
 
 
-            Toast.makeText(this, "You have taken 6 steps inside the Gordon Library Geofence, incrementing counter", Toast.LENGTH_SHORT);
+            Toast.makeText(this, "You have taken 6 steps inside the Gordon Library Geofence, incrementing counter", Toast.LENGTH_SHORT).show();
             libraryVisits++;
             libraryVisitsTextView.setText(libraryVisits);
 
