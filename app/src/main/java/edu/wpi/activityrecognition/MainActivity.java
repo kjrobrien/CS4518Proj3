@@ -7,6 +7,10 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.pm.PackageManager;
+import android.hardware.Sensor;
+import android.hardware.SensorEvent;
+import android.hardware.SensorEventListener;
+import android.hardware.SensorManager;
 import android.location.Location;
 import android.os.Bundle;
 import android.os.SystemClock;
@@ -37,7 +41,7 @@ import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.tasks.OnSuccessListener;
 
 public class MainActivity extends AppCompatActivity implements GoogleApiClient.ConnectionCallbacks,
-        GoogleApiClient.OnConnectionFailedListener, OnMapReadyCallback, ResultCallback<Status> {
+        GoogleApiClient.OnConnectionFailedListener, OnMapReadyCallback, ResultCallback<Status>, SensorEventListener {
 
     private static final String TAG = MainActivity.class.getSimpleName();
 
@@ -60,6 +64,15 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
 
     int fullerVisits = 0;
     int libraryVisits = 0;
+
+    int fullerSteps = 0;
+    int librarySteps = 0;
+
+    private boolean inFuller = false;
+    private boolean inLibrary = false;
+
+    private SensorManager mSensorManager;
+    private Sensor mSensor;
 
 
     @Override
@@ -100,23 +113,39 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
                 processGeofence(transition, fence);
             }
         };
+
+        mSensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
+        mSensor = mSensorManager.getDefaultSensor(Sensor.TYPE_STEP_DETECTOR);
     }
 
     private void processGeofence(String transition, String fence) {
         if(transition.equals("ENTER")) {
             if (fence.equals("FULLER")) {
 
+                Toast.makeText(this, "Entered geofence fuller", Toast.LENGTH_SHORT).show();
+                inFuller = true;
+                fullerSteps = 0;
             } else if (fence.equals("LIBRARY")) {
+                Toast.makeText(this, "Entered geofence library", Toast.LENGTH_SHORT).show();
 
+                inLibrary = true;
+                librarySteps = 0;
             } else if (fence.equals("APARTMENT")) {
                 Toast.makeText(this, "Entered geofence apartment", Toast.LENGTH_SHORT).show();
-                fullerVisitsTextView.setText(String.valueOf(++fullerVisits));
+                inFuller = true;
+                fullerSteps = 0;
             }
         } else if (transition.equals("EXIT")) {
             if (fence.equals("FULLER")) {
+                Toast.makeText(this, "exited geofence fuller", Toast.LENGTH_SHORT).show();
 
+                inFuller = false;
+                fullerSteps = 0;
             } else if (fence.equals("LIBRARY")) {
+                Toast.makeText(this, "exited geofence library", Toast.LENGTH_SHORT).show();
 
+                inLibrary = false;
+                librarySteps = 0;
             } else if (fence.equals("APARTMENT")) {
                 Toast.makeText(this, "Exited geofence apartment", Toast.LENGTH_SHORT).show();
             }
@@ -130,7 +159,15 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
         LocalBroadcastManager.getInstance(this).registerReceiver(mActivityReceiver, new IntentFilter(ActivityRecognizedService.LOCAL_BROADCAST_NAME));
         LocalBroadcastManager.getInstance(this).registerReceiver(mGeoFenceReceiver, new IntentFilter(GeofenceTransitionService.LOCAL_BROADCAST_NAME));
         mGoogleApiClient.connect();
+        mSensorManager.registerListener(this, mSensor, SensorManager.SENSOR_DELAY_NORMAL);
     }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        mSensorManager.unregisterListener(this);
+    }
+
 
     // When the map loads
     @Override
@@ -277,5 +314,35 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
     @Override
     public void onResult(@NonNull Status status) {
         Log.i(TAG, "onResult: " + status);
+    }
+
+    @Override
+    public void onSensorChanged(SensorEvent sensorEvent) {
+        if (inFuller) {
+            fullerSteps++;
+            if (fullerSteps >= 6) {
+                fullerVisits++;
+                Toast.makeText(this, "You have taken 6 steps inside the Fuller Labs Geofence, incrementing counter", Toast.LENGTH_SHORT).show();
+                fullerVisitsTextView.setText(String.valueOf(fullerVisits));
+                inFuller = false;
+                fullerSteps = 0;
+            }
+        }
+        if (inLibrary) {
+            librarySteps++;
+            if (librarySteps >= 6) {
+                libraryVisits++;
+                Toast.makeText(this, "You have taken 6 steps inside the Gordon Library Geofence, incrementing counter", Toast.LENGTH_SHORT).show();
+                libraryVisitsTextView.setText(String.valueOf(libraryVisits));
+                inLibrary = false;
+                librarySteps = 0;
+            }
+        }
+
+    }
+
+    @Override
+    public void onAccuracyChanged(Sensor sensor, int i) {
+
     }
 }
