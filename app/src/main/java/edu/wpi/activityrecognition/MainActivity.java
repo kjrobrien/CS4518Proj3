@@ -130,10 +130,6 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
 
                 inLibrary = true;
                 librarySteps = 0;
-            } else if (fence.equals("APARTMENT")) {
-                Toast.makeText(this, "Entered geofence apartment", Toast.LENGTH_SHORT).show();
-                inFuller = true;
-                fullerSteps = 0;
             }
         } else if (transition.equals("EXIT")) {
             if (fence.equals("FULLER")) {
@@ -146,8 +142,6 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
 
                 inLibrary = false;
                 librarySteps = 0;
-            } else if (fence.equals("APARTMENT")) {
-                Toast.makeText(this, "Exited geofence apartment", Toast.LENGTH_SHORT).show();
             }
         }
 
@@ -194,14 +188,11 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
         });
 
 
-        CircleOptions myApartment = new CircleOptions().center(new LatLng(42.270330, -71.804551)).radius(40.0f);
-
         CircleOptions fuller = new CircleOptions().center(new LatLng(42.275060, -71.806504)).radius(40.0f);
         CircleOptions library = new CircleOptions().center(new LatLng(42.274099, -71.806736)).radius(40.0f);
 
         googleMap.addCircle(fuller);
         googleMap.addCircle(library);
-        googleMap.addCircle(myApartment);
 
 
     }
@@ -214,12 +205,6 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
         PendingIntent pendingIntent = PendingIntent.getService(this, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT);
         ActivityRecognition.ActivityRecognitionApi.requestActivityUpdates(mGoogleApiClient, 0, pendingIntent);
 
-        Geofence geofence = new Geofence.Builder()
-                .setRequestId("APARTMENT")
-                .setCircularRegion(42.270330, -71.804551, 40.0f)
-                .setExpirationDuration(60 * 60 * 1000)
-                .setTransitionTypes(Geofence.GEOFENCE_TRANSITION_ENTER | Geofence.GEOFENCE_TRANSITION_EXIT)
-                .build();
 
         Geofence fullerGeofence = new Geofence.Builder()
                 .setRequestId("FULLER")
@@ -237,7 +222,6 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
 
         GeofencingRequest geofencingRequest = new GeofencingRequest.Builder()
                 .setInitialTrigger(GeofencingRequest.INITIAL_TRIGGER_ENTER)
-                .addGeofence(geofence)
                 .addGeofence(fullerGeofence)
                 .addGeofence(libraryGeofence)
                 .build();
