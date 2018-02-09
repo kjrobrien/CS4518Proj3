@@ -22,18 +22,22 @@ import android.widget.Toast;
 
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.api.GoogleApiClient;
+import com.google.android.gms.common.api.ResultCallback;
+import com.google.android.gms.common.api.Status;
 import com.google.android.gms.location.ActivityRecognition;
-import com.google.android.gms.location.ActivityRecognitionClient;
+import com.google.android.gms.location.Geofence;
+import com.google.android.gms.location.GeofencingRequest;
 import com.google.android.gms.location.LocationServices;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.MapFragment;
 import com.google.android.gms.maps.OnMapReadyCallback;
+import com.google.android.gms.maps.model.CircleOptions;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.tasks.OnSuccessListener;
 
 public class MainActivity extends AppCompatActivity implements GoogleApiClient.ConnectionCallbacks,
-        GoogleApiClient.OnConnectionFailedListener, OnMapReadyCallback {
+        GoogleApiClient.OnConnectionFailedListener, OnMapReadyCallback, ResultCallback<Status> {
 
     private static final String TAG = MainActivity.class.getSimpleName();
 
@@ -41,7 +45,8 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
 
     private MapFragment mMapFragment;
 
-    private BroadcastReceiver mReceiver;
+    private BroadcastReceiver mActivityReceiver;
+    private BroadcastReceiver mGeoFenceReceiver;
 
     private ImageView mActivityImage;
     private TextView mActivityText;
@@ -50,6 +55,8 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
 
     private String currentActivity;
 
+    private TextView fullerVisitsTextView;
+    private TextView libraryVisitsTextView;
 
 
     @Override
@@ -69,20 +76,52 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
         mActivityImage = (ImageView) findViewById(R.id.imageView);
         mActivityText = (TextView) findViewById(R.id.textActivity);
 
+
+        fullerVisitsTextView = (TextView) findViewById(R.id.fullerVisitsText);
+        libraryVisitsTextView = (TextView) findViewById(R.id.libraryVisitsText);
+
         // Listen for LocalBroadcast of activity recognition
-        mReceiver = new BroadcastReceiver() {
+        mActivityReceiver = new BroadcastReceiver() {
             @Override
             public void onReceive(Context context, Intent intent) {
                 String activity = intent.getStringExtra(ActivityRecognizedService.LOCAL_BROADCAST_EXTRA);
                 processActivity(activity);
             }
         };
+
+        mGeoFenceReceiver = new BroadcastReceiver() {
+            @Override
+            public void onReceive(Context context, Intent intent) {
+                String transition = intent.getStringExtra(GeofenceTransitionService.LOCAL_BROADCAST_EXTRA_TRANSITION);
+                String fence = intent.getStringExtra(GeofenceTransitionService.LOCAL_BROADCAST_EXTRA_FENCE);
+                processGeofence(transition, fence);
+            }
+        };
+    }
+
+    private void processGeofence(String transition, String fence) {
+        if(transition.equals("ENTER")) {
+            if (fence.equals("FULLER")) {
+
+            } else if (fence.equals("LIBRARY")) {
+
+            } else if (fence.equals("APARTMENT")) {
+            }
+        } else if (transition.equals("EXIT")) {
+            if (fence.equals("FULLER")) {
+
+            } else if (fence.equals("LIBRARY")) {
+
+            }
+        }
+
     }
 
     @Override
     protected void onResume() {
         super.onResume();
-        LocalBroadcastManager.getInstance(this).registerReceiver(mReceiver, new IntentFilter(ActivityRecognizedService.LOCAL_BROADCAST_NAME));
+        LocalBroadcastManager.getInstance(this).registerReceiver(mActivityReceiver, new IntentFilter(ActivityRecognizedService.LOCAL_BROADCAST_NAME));
+        //LocalBroadcastManager.getInstance(this).registerReceiver(mGeoFenceReceiver, new IntentFilter(GeofenceTransitionService.LOCAL_BROADCAST_NAME));
         mGoogleApiClient.connect();
     }
 
@@ -109,15 +148,70 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
                 }
             }
         });
+
+
+        CircleOptions myApartment = new CircleOptions().center(new LatLng(42.270330, -71.804551)).radius(500.0f);
+
+        CircleOptions fuller = new CircleOptions().center(new LatLng(42.275060, -71.806504)).radius(40.0f);
+        CircleOptions library = new CircleOptions().center(new LatLng(42.274099, -71.806736)).radius(40.0f);
+
+        googleMap.addCircle(fuller);
+        googleMap.addCircle(library);
+        googleMap.addCircle(myApartment);
+
+
     }
 
     // google api is connected
     @Override
     public void onConnected(@Nullable Bundle bundle) {
         // start activity recognition
-        Intent intent = new Intent( this, ActivityRecognizedService.class );
-        PendingIntent pendingIntent = PendingIntent.getService( this, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT );
-        ActivityRecognition.ActivityRecognitionApi.requestActivityUpdates( mGoogleApiClient, 0, pendingIntent );
+        Intent intent = new Intent(this, ActivityRecognizedService.class);
+        PendingIntent pendingIntent = PendingIntent.getService(this, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT);
+        ActivityRecognition.ActivityRecognitionApi.requestActivityUpdates(mGoogleApiClient, 0, pendingIntent);
+
+        Geofence geofence = new Geofence.Builder()
+                .setRequestId("APARTMENT")
+                .setCircularRegion(42.270330, -71.804551, 500.0f)
+                .setExpirationDuration(60 * 60 * 1000)
+                .setTransitionTypes(Geofence.GEOFENCE_TRANSITION_ENTER | Geofence.GEOFENCE_TRANSITION_EXIT)
+                .build();
+
+        Geofence fullerGeofence = new Geofence.Builder()
+                .setRequestId("FULLER")
+                .setTransitionTypes(Geofence.GEOFENCE_TRANSITION_ENTER | Geofence.GEOFENCE_TRANSITION_EXIT)
+                .setCircularRegion(42.275060, -71.806504, 40f)
+                .setExpirationDuration(3600000)
+                .build();
+
+        Geofence libraryGeofence = new Geofence.Builder()
+                .setRequestId("LIBRARY")
+                .setTransitionTypes(Geofence.GEOFENCE_TRANSITION_ENTER | Geofence.GEOFENCE_TRANSITION_EXIT)
+                .setCircularRegion(42.274099, -71.806736, 40f)
+                .setExpirationDuration(3600000)
+                .build();
+
+        GeofencingRequest geofencingRequest = new GeofencingRequest.Builder()
+                .setInitialTrigger(GeofencingRequest.INITIAL_TRIGGER_ENTER)
+                .addGeofence(geofence).build();
+                /*.addGeofence(fullerGeofence)
+                .addGeofence(libraryGeofence)
+                .build();*/
+
+        Intent geoIntent = new Intent(this, GeofenceTransitionService.class);
+        PendingIntent pend = PendingIntent.getService(this, 0, geoIntent, PendingIntent.FLAG_UPDATE_CURRENT);
+
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            // TODO: Consider calling
+            //    ActivityCompat#requestPermissions
+            // here to request the missing permissions, and then overriding
+            //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
+            //                                          int[] grantResults)
+            // to handle the case where the user grants the permission. See the documentation
+            // for ActivityCompat#requestPermissions for more details.
+            return;
+        }
+        LocationServices.GeofencingApi.addGeofences(mGoogleApiClient, geofencingRequest, pend).setResultCallback(this);
     }
 
 
@@ -171,5 +265,10 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
             }
         }
 
+    }
+
+    @Override
+    public void onResult(@NonNull Status status) {
+        Log.i(TAG, "onResult: " + status);
     }
 }

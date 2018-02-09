@@ -34,6 +34,7 @@
             android:value="AIzaSyDsa1dNTzE83qA1fT5qSlmxvNaHxGE0PyI" />
 
         <service android:name=".ActivityRecognizedService" />
+        <service android:name=".GeofenceTransitionService" />
     </application>
 
 </manifest>
