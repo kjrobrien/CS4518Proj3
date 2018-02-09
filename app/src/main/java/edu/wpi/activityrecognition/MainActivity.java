@@ -58,6 +58,9 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
     private TextView fullerVisitsTextView;
     private TextView libraryVisitsTextView;
 
+    int fullerVisits = 0;
+    int libraryVisits = 0;
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -106,12 +109,16 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
             } else if (fence.equals("LIBRARY")) {
 
             } else if (fence.equals("APARTMENT")) {
+                Toast.makeText(this, "Entered geofence apartment", Toast.LENGTH_SHORT).show();
+                fullerVisitsTextView.setText(String.valueOf(++fullerVisits));
             }
         } else if (transition.equals("EXIT")) {
             if (fence.equals("FULLER")) {
 
             } else if (fence.equals("LIBRARY")) {
 
+            } else if (fence.equals("APARTMENT")) {
+                Toast.makeText(this, "Exited geofence apartment", Toast.LENGTH_SHORT).show();
             }
         }
 
@@ -121,7 +128,7 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
     protected void onResume() {
         super.onResume();
         LocalBroadcastManager.getInstance(this).registerReceiver(mActivityReceiver, new IntentFilter(ActivityRecognizedService.LOCAL_BROADCAST_NAME));
-        //LocalBroadcastManager.getInstance(this).registerReceiver(mGeoFenceReceiver, new IntentFilter(GeofenceTransitionService.LOCAL_BROADCAST_NAME));
+        LocalBroadcastManager.getInstance(this).registerReceiver(mGeoFenceReceiver, new IntentFilter(GeofenceTransitionService.LOCAL_BROADCAST_NAME));
         mGoogleApiClient.connect();
     }
 
@@ -150,7 +157,7 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
         });
 
 
-        CircleOptions myApartment = new CircleOptions().center(new LatLng(42.270330, -71.804551)).radius(500.0f);
+        CircleOptions myApartment = new CircleOptions().center(new LatLng(42.270330, -71.804551)).radius(40.0f);
 
         CircleOptions fuller = new CircleOptions().center(new LatLng(42.275060, -71.806504)).radius(40.0f);
         CircleOptions library = new CircleOptions().center(new LatLng(42.274099, -71.806736)).radius(40.0f);
@@ -172,7 +179,7 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
 
         Geofence geofence = new Geofence.Builder()
                 .setRequestId("APARTMENT")
-                .setCircularRegion(42.270330, -71.804551, 500.0f)
+                .setCircularRegion(42.270330, -71.804551, 40.0f)
                 .setExpirationDuration(60 * 60 * 1000)
                 .setTransitionTypes(Geofence.GEOFENCE_TRANSITION_ENTER | Geofence.GEOFENCE_TRANSITION_EXIT)
                 .build();
@@ -193,10 +200,10 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
 
         GeofencingRequest geofencingRequest = new GeofencingRequest.Builder()
                 .setInitialTrigger(GeofencingRequest.INITIAL_TRIGGER_ENTER)
-                .addGeofence(geofence).build();
-                /*.addGeofence(fullerGeofence)
+                .addGeofence(geofence)
+                .addGeofence(fullerGeofence)
                 .addGeofence(libraryGeofence)
-                .build();*/
+                .build();
 
         Intent geoIntent = new Intent(this, GeofenceTransitionService.class);
         PendingIntent pend = PendingIntent.getService(this, 0, geoIntent, PendingIntent.FLAG_UPDATE_CURRENT);

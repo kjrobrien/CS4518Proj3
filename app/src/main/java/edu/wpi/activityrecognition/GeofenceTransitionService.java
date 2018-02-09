@@ -37,7 +37,6 @@ public class GeofenceTransitionService extends IntentService {
             Log.e(TAG, errorMsg);
             return;
         }
-        Log.d(TAG, "this works");
 
         int geoFenceTransition = geofencingEvent.getGeofenceTransition();
 
@@ -46,17 +45,17 @@ public class GeofenceTransitionService extends IntentService {
         if (geoFenceTransition == Geofence.GEOFENCE_TRANSITION_ENTER) {
             transition = "ENTER";
             fence = geofencingEvent.getTriggeringGeofences().get(0).getRequestId();
-            Log.d(TAG, "We entered the geofence" + fence);
+            Log.d(TAG, "We entered the geofence " + fence);
         } else if (geoFenceTransition == Geofence.GEOFENCE_TRANSITION_EXIT) {
             transition = "EXIT";
             fence = geofencingEvent.getTriggeringGeofences().get(0).getRequestId();
-            Log.d(TAG, "we exited the geofence" + fence);
+            Log.d(TAG, "we exited the geofence " + fence);
         }
-/*
+
         Intent broadcastIntent = new Intent(LOCAL_BROADCAST_NAME);
         broadcastIntent.putExtra(LOCAL_BROADCAST_EXTRA_FENCE, fence);
         broadcastIntent.putExtra(LOCAL_BROADCAST_EXTRA_TRANSITION, transition);
-        LocalBroadcastManager.getInstance(this).sendBroadcast(broadcastIntent);*/
+        LocalBroadcastManager.getInstance(this).sendBroadcast(broadcastIntent);
 
     }
 
