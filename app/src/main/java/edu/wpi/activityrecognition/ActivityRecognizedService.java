@@ -37,7 +37,7 @@ public class ActivityRecognizedService extends IntentService {
     }
 
     private void handleDetectedActivities(List<DetectedActivity> probableActivities) {
-        String message = "STILL";
+        String message = "";
         for( DetectedActivity activity : probableActivities ) {
             switch( activity.getType() ) {
                 case DetectedActivity.RUNNING: {

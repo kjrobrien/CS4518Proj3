@@ -60,7 +60,6 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
         // Set up the google api client
         if (mGoogleApiClient == null) {
             mGoogleApiClient = new GoogleApiClient.Builder(this).addConnectionCallbacks(this).addOnConnectionFailedListener(this).addApi(LocationServices.API).addApi(ActivityRecognition.API).build();
-            mGoogleApiClient.connect();
         }
 
         // Set up the map
@@ -78,8 +77,13 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
                 processActivity(activity);
             }
         };
+    }
 
+    @Override
+    protected void onResume() {
+        super.onResume();
         LocalBroadcastManager.getInstance(this).registerReceiver(mReceiver, new IntentFilter(ActivityRecognizedService.LOCAL_BROADCAST_NAME));
+        mGoogleApiClient.connect();
     }
 
     // When the map loads
@@ -142,6 +146,9 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
                 Toast.makeText(this, "You have just " + pastTense + " for " + String.valueOf(minutes) + " minutes and " + String.valueOf(seconds) + " seconds", Toast.LENGTH_SHORT).show();
             }
             timeActivityStarted = SystemClock.elapsedRealtime();
+            if (activity.isEmpty()) {
+                timeActivityStarted = 0;
+            }
             currentActivity = activity;
             Log.d(TAG, "Activity: " + activity);
             switch (activity) {
@@ -158,6 +165,8 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
                     mActivityText.setText("You are Still");
                     break;
                 default:
+                    mActivityImage.setImageResource(0);
+                    mActivityText.setText("");
                     break;
             }
         }
